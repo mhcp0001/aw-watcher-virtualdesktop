@@ -6,6 +6,7 @@ import win32api
 import win32gui
 import win32process
 import wmi
+from pyvda import VirtualDesktop
 
 
 def get_app_path(hwnd) -> Optional[str]:
@@ -42,6 +43,14 @@ def get_window_title(hwnd):
 def get_active_window_handle():
     hwnd = win32gui.GetForegroundWindow()
     return hwnd
+
+
+def get_desktop_name(hwnd):
+    try:
+        desktop = VirtualDesktop.from_hwnd(hwnd)
+        return desktop.name
+    except Exception:
+        return "unknown"
 
 
 # WMI-version, used as fallback if win32gui/win32process/win32api fails (such as for "run as admin" processes)
@@ -85,5 +94,6 @@ if __name__ == "__main__":
         print("App (wmi):  ", get_app_name_wmi(hwnd))
         print("Path:       ", get_app_path(hwnd))
         print("Path (wmi): ", get_app_path_wmi(hwnd))
+        print("Desktop:    ", get_desktop_name(hwnd))
 
         time.sleep(1.0)

@@ -65,6 +65,7 @@ struct NetworkMessage: Codable, Equatable {
   var app: String
   var title: String
   var url: String?
+  var desktop: String?
 }
 
 struct Heartbeat: Codable {
@@ -264,7 +265,7 @@ func sendHeartbeatSingle(_ heartbeat: Heartbeat, pulsetime: Double) async throws
     throw HeartbeatError.error(msg: "Failed to send heartbeat: \(response)")
   }
 
-  debug("[heartbeat] bucket: \(bucketName), timestamp: \(heartbeat.timestamp), pulsetime: \(round(pulsetime * 10) / 10), app: \(heartbeat.data.app), title: \(heartbeat.data.title), url: \(heartbeat.data.url ?? "")")
+  debug("[heartbeat] bucket: \(bucketName), timestamp: \(heartbeat.timestamp), pulsetime: \(round(pulsetime * 10) / 10), app: \(heartbeat.data.app), title: \(heartbeat.data.title), url: \(heartbeat.data.url ?? ""), desktop: \(heartbeat.data.desktop ?? "")")
 }
 
 class MainThing {
@@ -324,7 +325,9 @@ class MainThing {
     var windowTitle: AnyObject?
     AXUIElementCopyAttributeValue(axElement, kAXTitleAttribute as CFString, &windowTitle)
 
-    var data = NetworkMessage(app: frontmost.localizedName!, title: windowTitle as? String ?? "")
+    let onScreenWindows = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID)
+    let activeSpace = CGMainDisplayID()
+    var data = NetworkMessage(app: frontmost.localizedName!, title: windowTitle as? String ?? "", desktop: String(activeSpace))
 
     if CHROME_BROWSERS.contains(frontmost.localizedName!) {
       debug("Chrome browser detected, extracting URL and title")
@@ -335,7 +338,7 @@ class MainThing {
       let activeTab = frontWindow.activeTab!
 
       if frontWindow.mode == "incognito" {
-        data = NetworkMessage(app: "", title: "")
+        data = NetworkMessage(app: "", title: "", desktop: String(activeSpace))
       } else {
         data.url = activeTab.URL
 

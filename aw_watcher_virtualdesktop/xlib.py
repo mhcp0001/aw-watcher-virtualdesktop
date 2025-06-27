@@ -17,6 +17,18 @@ NET_WM_NAME = display.intern_atom("_NET_WM_NAME")
 UTF8_STRING = display.intern_atom("UTF8_STRING")
 
 
+def get_desktop_name(window: Window) -> str:
+    """Gets the name of the virtual desktop."""
+    try:
+        atom = display.intern_atom("_NET_DESKTOP_NAMES")
+        desktop_names = screen.root.get_full_property(atom, UTF8_STRING).value.decode().split("\x00")
+        atom = display.intern_atom("_NET_WM_DESKTOP")
+        desktop = window.get_full_property(atom, X.AnyPropertyType).value[0]
+        return desktop_names[desktop]
+    except (Xlib.error.XError, UnicodeDecodeError, IndexError):
+        return "unknown"
+
+
 def _get_current_window_id() -> Optional[int]:
     atom = display.get_atom("_NET_ACTIVE_WINDOW")
     window_prop = screen.root.get_full_property(atom, X.AnyPropertyType)

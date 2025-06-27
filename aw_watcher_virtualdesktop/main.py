@@ -49,7 +49,7 @@ def main():
         raise Exception("DISPLAY environment variable not set")
 
     setup_logging(
-        name="aw-watcher-window",
+        name="aw-watcher-virtualdesktop",
         testing=args.testing,
         verbose=args.verbose,
         log_stderr=True,
@@ -60,7 +60,7 @@ def main():
         background_ensure_permissions()
 
     client = ActivityWatchClient(
-        "aw-watcher-window", host=args.host, port=args.port, testing=args.testing
+        "aw-watcher-virtualdesktop", host=args.host, port=args.port, testing=args.testing
     )
 
     bucket_id = f"{client.client_name}_{client.client_hostname}"
@@ -68,14 +68,14 @@ def main():
 
     client.create_bucket(bucket_id, event_type, queued=True)
 
-    logger.info("aw-watcher-window started")
+    logger.info("aw-watcher-virtualdesktop started")
     client.wait_for_start()
 
     with client:
         if sys.platform == "darwin" and args.strategy == "swift":
             logger.info("Using swift strategy, calling out to swift binary")
             binpath = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), "aw-watcher-window-macos"
+                os.path.dirname(os.path.realpath(__file__)), "aw-watcher-virtualdesktop-macos"
             )
 
             try:
