@@ -42,55 +42,6 @@ jobs:
         # Try to install with existing lock file, if it fails, update lock file
         poetry install --no-interaction || (poetry lock && poetry install --no-interaction)
 
-    - name: Start Mock ActivityWatch Server
-      run: |
-        # Start a simple mock server in the background
-        poetry run python -c "
-        from http.server import HTTPServer, BaseHTTPRequestHandler
-        import json
-        import threading
-        import time
-        
-        class MockHandler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                if self.path.startswith('/api/0/info'):
-                    self.send_response(200)
-                    self.send_header('Content-type', 'application/json')
-                    self.end_headers()
-                    response = {'testing': True, 'version': '0.12.0', 'hostname': 'ci-test'}
-                    self.wfile.write(json.dumps(response).encode())
-                elif self.path.startswith('/api/0/buckets'):
-                    self.send_response(200)
-                    self.send_header('Content-type', 'application/json') 
-                    self.end_headers()
-                    self.wfile.write(json.dumps({}).encode())
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-                    
-            def do_POST(self):
-                # Handle bucket creation and heartbeats
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({'success': True}).encode())
-                    
-            def log_message(self, format, *args):
-                pass  # Suppress logs
-        
-        def start_server():
-            server = HTTPServer(('localhost', 5600), MockHandler)
-            server.serve_forever()
-        
-        thread = threading.Thread(target=start_server, daemon=True)
-        thread.start()
-        print('Mock ActivityWatch server started on port 5600')
-        time.sleep(2)  # Give server time to start
-        " &
-        
-        # Wait for server to start
-        sleep 3
-        echo "Mock server should be running..."
 
     - name: Run virtual desktop tests
       run: |
