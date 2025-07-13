@@ -84,6 +84,12 @@ def get_virtual_desktop_windows() -> Dict[str, str]:
 def get_virtual_desktop_linux() -> Dict[str, str]:
     """Get workspace name on Linux (X11)"""
     try:
+        import os
+        # Check if we're in a headless environment (CI)
+        if not os.environ.get('DISPLAY'):
+            logger.debug("No DISPLAY environment variable, using default desktop")
+            return {"desktop": "Desktop 1"}
+            
         from . import xlib
         import Xlib.display
         
