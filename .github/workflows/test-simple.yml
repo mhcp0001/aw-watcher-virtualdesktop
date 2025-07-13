@@ -25,11 +25,10 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
 
-    - name: Update lock file if needed
-      run: poetry lock --no-update
-
     - name: Install dependencies
-      run: poetry install --no-interaction
+      run: |
+        # Try to install with existing lock file, if it fails, update lock file
+        poetry install --no-interaction || (poetry lock && poetry install --no-interaction)
 
     - name: Run basic virtual desktop test
       run: |
@@ -77,11 +76,10 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1
 
-    - name: Update lock file if needed
-      run: poetry lock --no-update
-
     - name: Install dependencies
-      run: poetry install --no-interaction
+      run: |
+        # Try to install with existing lock file, if it fails, update lock file
+        poetry install --no-interaction || (poetry lock && poetry install --no-interaction)
 
     - name: Start mock ActivityWatch server
       run: |
@@ -91,29 +89,45 @@ jobs:
         import json
         import threading
         import time
+        import sys
         
         class MockHandler(BaseHTTPRequestHandler):
             def do_GET(self):
-                if self.path == '/api/0/info':
+                if self.path.startswith('/api/0/info'):
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json')
                     self.end_headers()
-                    response = {'testing': True, 'version': '0.12.0'}
+                    response = {'testing': True, 'version': '0.12.0', 'hostname': 'mock-server'}
                     self.wfile.write(json.dumps(response).encode())
                 else:
                     self.send_response(404)
                     self.end_headers()
                     
+            def do_POST(self):
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': True}).encode())
+                    
             def log_message(self, format, *args):
                 pass  # Suppress logs
         
-        server = HTTPServer(('localhost', 5600), MockHandler)
-        print('Mock server started on port 5600')
-        server.serve_request()  # Handle one request
+        def start_server():
+            try:
+                server = HTTPServer(('localhost', 5600), MockHandler)
+                print('Mock server started on port 5600', flush=True)
+                server.serve_forever()
+            except Exception as e:
+                print(f'Server error: {e}', flush=True)
+        
+        thread = threading.Thread(target=start_server, daemon=True)
+        thread.start()
+        time.sleep(3)  # Give server time to start
+        print('Server startup complete', flush=True)
         " &
         
         # Wait for server to start
-        sleep 2
+        sleep 4
 
     - name: Test ActivityWatch client connection
       run: |
