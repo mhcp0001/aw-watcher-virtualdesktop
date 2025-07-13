@@ -64,21 +64,5 @@ jobs:
     - name: Run integration tests
       run: poetry run python tests/test_integration.py
 
-    - name: Test ActivityWatch connection
-      run: |
-        poetry run python -c "
-        from aw_client import ActivityWatchClient
-        import time
-        
-        client = ActivityWatchClient('test-client', host='localhost', port=5600, testing=True)
-        try:
-            info = client.get_info()
-            print('ActivityWatch server info:', info)
-            print('✓ Successfully connected to ActivityWatch server')
-        except Exception as e:
-            print('✗ Failed to connect:', e)
-            raise
-        "
-
     - name: Run watcher simulation test
       run: poetry run python tests/test_watcher_simulation.py

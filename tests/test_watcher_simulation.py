@@ -5,13 +5,21 @@ Watcher simulation test - simulates the main watcher loop with ActivityWatch
 import sys
 import time
 import logging
+import os
 from datetime import datetime, timezone
+
+# Add current directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aw_client import ActivityWatchClient
 from aw_core.models import Event
+from tests.mock_server import MockActivityWatchServer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Global mock server instance
+mock_server = None
 
 def simulate_watcher_heartbeat():
     """Simulate the main watcher heartbeat loop"""
@@ -148,34 +156,68 @@ def test_bucket_persistence():
         logger.error(f"✗ Bucket persistence test failed: {e}")
         return False
 
+def setup_mock_server():
+    """Setup mock ActivityWatch server for tests"""
+    global mock_server
+    
+    logger.info("Setting up mock ActivityWatch server for simulation...")
+    mock_server = MockActivityWatchServer()
+    
+    if mock_server.start():
+        if mock_server.wait_for_ready():
+            logger.info("Mock server is ready for simulation tests")
+            return True
+        else:
+            logger.error("Mock server failed to become ready")
+            return False
+    else:
+        logger.error("Failed to start mock server")
+        return False
+
+def cleanup_mock_server():
+    """Cleanup mock server"""
+    global mock_server
+    if mock_server:
+        mock_server.stop()
+        logger.info("Mock server cleaned up")
+
 def main():
     """Run watcher simulation tests"""
     logger.info("Starting watcher simulation tests...")
     
-    tests = [
-        simulate_watcher_heartbeat,
-        test_bucket_persistence
-    ]
-    
-    passed = 0
-    failed = 0
-    
-    for test in tests:
-        try:
-            if test():
-                passed += 1
-            else:
-                failed += 1
-        except Exception as e:
-            logger.error(f"Test {test.__name__} raised exception: {e}")
-            failed += 1
-    
-    logger.info(f"\nSimulation Results: {passed} passed, {failed} failed")
-    
-    if failed > 0:
+    # Setup mock server
+    if not setup_mock_server():
+        logger.error("Failed to setup mock server, exiting")
         sys.exit(1)
-    else:
-        logger.info("All simulation tests passed! 🎉")
+    
+    try:
+        tests = [
+            simulate_watcher_heartbeat,
+            test_bucket_persistence
+        ]
+        
+        passed = 0
+        failed = 0
+        
+        for test in tests:
+            try:
+                if test():
+                    passed += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                logger.error(f"Test {test.__name__} raised exception: {e}")
+                failed += 1
+        
+        logger.info(f"\nSimulation Results: {passed} passed, {failed} failed")
+        
+        if failed > 0:
+            sys.exit(1)
+        else:
+            logger.info("All simulation tests passed! 🎉")
+            
+    finally:
+        cleanup_mock_server()
 
 if __name__ == "__main__":
     main()
