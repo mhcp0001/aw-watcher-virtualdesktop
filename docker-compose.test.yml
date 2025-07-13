@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  activitywatch:
+    image: activitywatch/activitywatch:latest
+    ports:
+      - "5600:5600"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5600/api/0/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      - AW_TESTING=true
+    
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      activitywatch:
+        condition: service_healthy
+    environment:
+      - AW_SERVER_HOST=activitywatch
+      - AW_SERVER_PORT=5600
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      bash -c "
+        echo 'Waiting for ActivityWatch to be ready...' &&
+        sleep 5 &&
+        poetry run python tests/test_integration.py &&
+        poetry run python tests/test_watcher_simulation.py
+      "

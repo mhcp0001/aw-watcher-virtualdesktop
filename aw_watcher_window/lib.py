@@ -2,6 +2,7 @@ import sys
 from typing import Optional
 
 from .exceptions import FatalError
+from .virtualdesktop import get_virtual_desktop_info
 
 
 def get_current_window_linux() -> Optional[dict]:
@@ -16,7 +17,12 @@ def get_current_window_linux() -> Optional[dict]:
         cls = xlib.get_window_class(window)
         name = xlib.get_window_name(window)
 
-    return {"app": cls, "title": name}
+    window_info = {"app": cls, "title": name}
+    # Add virtual desktop info
+    desktop_info = get_virtual_desktop_info()
+    window_info.update(desktop_info)
+    
+    return window_info
 
 
 def get_current_window_macos(strategy: str) -> Optional[dict]:
@@ -26,13 +32,20 @@ def get_current_window_macos(strategy: str) -> Optional[dict]:
     if strategy == "jxa":
         from . import macos_jxa
 
-        return macos_jxa.getInfo()
+        window_info = macos_jxa.getInfo()
     elif strategy == "applescript":
         from . import macos_applescript
 
-        return macos_applescript.getInfo()
+        window_info = macos_applescript.getInfo()
     else:
         raise FatalError(f"invalid strategy '{strategy}'")
+    
+    # Add virtual desktop info
+    if window_info:
+        desktop_info = get_virtual_desktop_info()
+        window_info.update(desktop_info)
+    
+    return window_info
 
 
 def get_current_window_windows() -> Optional[dict]:
@@ -52,7 +65,12 @@ def get_current_window_windows() -> Optional[dict]:
     if title is None:
         title = "unknown"
 
-    return {"app": app, "title": title}
+    window_info = {"app": app, "title": title}
+    # Add virtual desktop info
+    desktop_info = get_virtual_desktop_info()
+    window_info.update(desktop_info)
+    
+    return window_info
 
 
 def get_current_window(strategy: Optional[str] = None) -> Optional[dict]:
